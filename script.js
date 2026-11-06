@@ -399,32 +399,59 @@ function playYT(id){
 }
 
 // ── Tape hiss: the same soft static for every track, only while a song loads ──
-let hissBuf=null, hissSrc=null, hissGain=null, hissWatch=null;
+let hissBuf=null, hissSrc=null, hissGain=null, hissWatch=null, hissExtra=[];
+function cassetteClunk(dest){
+  // the play key going down: a dull thump plus a short mechanical click
+  const t0=audioCtx.currentTime;
+  const th=audioCtx.createOscillator(), thg=audioCtx.createGain();
+  th.type='sine'; th.frequency.setValueAtTime(140,t0); th.frequency.exponentialRampToValueAtTime(48,t0+0.12);
+  thg.gain.setValueAtTime(0.0001,t0); thg.gain.exponentialRampToValueAtTime(0.5,t0+0.005); thg.gain.exponentialRampToValueAtTime(0.0001,t0+0.18);
+  th.connect(thg); thg.connect(dest); th.start(t0); th.stop(t0+0.2);
+  const clk=audioCtx.createBufferSource(); const cb=audioCtx.createBuffer(1,Math.floor(audioCtx.sampleRate*0.03),audioCtx.sampleRate); const cd=cb.getChannelData(0);
+  for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1)*Math.pow(1-i/cd.length,3);
+  clk.buffer=cb; const bp=audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2400; bp.Q.value=1.2;
+  const cg=audioCtx.createGain(); cg.gain.value=0.35; clk.connect(bp); bp.connect(cg); cg.connect(dest); clk.start(t0+0.01);
+}
 function startHiss(){
   stopHiss(true);
   if(!hissBuf){
     const len=audioCtx.sampleRate*2; hissBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
-    const d=hissBuf.getChannelData(0); let b0=0,b1=0,b2=0;
-    for(let i=0;i<len;i++){const w=Math.random()*2-1; b0=0.997*b0+w*0.029; b1=0.985*b1+w*0.032; b2=0.95*b2+w*0.048; d[i]=(b0+b1+b2+w*0.05)*0.6;}
+    const d=hissBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
   }
-  hissSrc=audioCtx.createBufferSource(); hissSrc.buffer=hissBuf; hissSrc.loop=true;
-  const hp=audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=900;
-  const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=7000;
-  hissGain=audioCtx.createGain(); hissGain.gain.value=0;
-  hissSrc.connect(hp); hp.connect(lp); lp.connect(hissGain); hissGain.connect(analyser);
-  hissSrc.start(); fade(hissGain,0,0.22,0.4);
-  // watch for the song to start; hard stop after 10 s no matter what
-  const started=audioCtx.currentTime;
+  const t0=audioCtx.currentTime;
+  hissGain=audioCtx.createGain(); hissGain.gain.value=0; hissGain.connect(analyser);
+  // rewind: the tape whirs up to speed and keeps spinning while the next song loads
+  // 1) motor whine, pitch climbing as the reels speed up
+  const whine=audioCtx.createOscillator(), wg=audioCtx.createGain(); whine.type='sawtooth';
+  whine.frequency.setValueAtTime(180,t0); whine.frequency.exponentialRampToValueAtTime(900,t0+1.4);
+  const wlp=audioCtx.createBiquadFilter(); wlp.type='lowpass'; wlp.frequency.value=2200; wlp.Q.value=4;
+  wg.gain.value=0.05; whine.connect(wlp); wlp.connect(wg); wg.connect(hissGain);
+  // 2) tape rushing past the heads: noise swept upward through a resonant band
+  const rush=audioCtx.createBufferSource(); rush.buffer=hissBuf; rush.loop=true;
+  const rbp=audioCtx.createBiquadFilter(); rbp.type='bandpass'; rbp.Q.value=2.2;
+  rbp.frequency.setValueAtTime(500,t0); rbp.frequency.exponentialRampToValueAtTime(3800,t0+1.4);
+  const rg=audioCtx.createGain(); rg.gain.value=0.5; rush.connect(rbp); rbp.connect(rg); rg.connect(hissGain);
+  // 3) flutter: the uneven spin of a cheap deck
+  const flt=audioCtx.createOscillator(), fg=audioCtx.createGain(); flt.frequency.value=11; fg.gain.value=60; flt.connect(fg); fg.connect(whine.frequency);
+  const flt2=audioCtx.createOscillator(), fg2=audioCtx.createGain(); flt2.frequency.value=6; fg2.gain.value=0.15; flt2.connect(fg2); fg2.connect(rg.gain);
+  hissSrc=rush;
+  [rush,whine,flt,flt2].forEach(n=>n.start(t0));
+  hissExtra=[whine,flt,flt2,wg,wlp,rbp,rg,fg,fg2];
+  fade(hissGain,0,0.3,0.25);
+  const started=t0;
   hissWatch=setInterval(()=>{
     let st=-1; try{st=ytPlayer.getPlayerState();}catch(e){}
-    if(st===YT.PlayerState.PLAYING || audioCtx.currentTime-started>10 || !playing) stopHiss();
-  },200);
+    if(st===YT.PlayerState.PLAYING){ stopHiss(false,true); }
+    else if(audioCtx.currentTime-started>10 || !playing){ stopHiss(); }
+  },150);
 }
-function stopHiss(now){
+function stopHiss(now,landed){
   if(hissWatch){clearInterval(hissWatch);hissWatch=null;}
   if(!hissSrc) return;
+  if(landed) cassetteClunk(analyser);
   const src=hissSrc, g=hissGain; hissSrc=null; hissGain=null;
-  const t0=audioCtx.currentTime, dur=now?0.05:0.8;
+  const t0=audioCtx.currentTime, dur=now?0.05:(landed?0.12:0.8);
   g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(g.gain.value,t0); g.gain.linearRampToValueAtTime(0,t0+dur);
-  setTimeout(()=>{try{src.stop();src.disconnect();g.disconnect();}catch(e){}},dur*1000+60);
+  const extra=hissExtra; hissExtra=[];
+  setTimeout(()=>{try{src.stop();src.disconnect();g.disconnect();}catch(e){} extra.forEach(n=>{try{n.stop&&n.stop();}catch(e){} try{n.disconnect();}catch(e){}});},dur*1000+60);
 }
