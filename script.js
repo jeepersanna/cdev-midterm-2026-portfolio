@@ -125,7 +125,7 @@ const SECTION_TRACKS = [
     url:null, yt:'DvxxdZpMFHg', synthIdx:0 },
   // s3 — a world with no windows
   { title:'jesus freak', artist:'dc talk', year:'1995',
-    url:null, yt:'kbB0QrBIs9k', synthIdx:1 },
+    url:null, yt:'sQZVzKKfVhw', synthIdx:1 },
   // s4 — what i longed for
   { title:'zombie', artist:'the cranberries', year:'1994',
     url:null, yt:'6Ejga4kJUts', synthIdx:2 },
@@ -225,6 +225,8 @@ function playTrack(idx){
     // silent synth, only to give the waveform something real to follow
     if(!vizAnalyser){vizAnalyser=audioCtx.createAnalyser();vizAnalyser.fftSize=512;const mute=audioCtx.createGain();mute.gain.value=0;vizAnalyser.connect(mute);mute.connect(audioCtx.destination);}
     const vm=audioCtx.createGain();vm.gain.value=0.5;vm.connect(vizAnalyser);nodes.push(vm);
+    ytBridge=audioCtx.createGain();ytBridge.gain.value=0;vm.connect(ytBridge);ytBridge.connect(analyser);nodes.push(ytBridge);
+    fade(ytBridge,0,0.35,0.6);
     playSynth(track.synthIdx, vm);
     return;
   }
@@ -291,7 +293,7 @@ let lastIdx=-1,vcol=secColors[0];
 let _secEls=null;
 function getIdx(){
   if(!_secEls) _secEls=secIds.map(id=>document.getElementById(id));
-  const half=window.innerHeight*0.5;
+  const half=window.innerHeight*0.85;
   let a=0;
   _secEls.forEach((el,i)=>{if(el&&el.getBoundingClientRect().top<=half)a=i;});
   return a;
@@ -366,17 +368,17 @@ document.querySelectorAll('.sb-block--lyrics').forEach(block => {
 
 
 // ── Portfolio copy: real songs through YouTube's official embedded player ──
-let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null, ytInternal=false, vizAnalyser=null;
+let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null, ytInternal=false, vizAnalyser=null, ytBridge=null;
 function ytStop(){document.getElementById('tape-screen')?.classList.remove('on');if(ytReady&&ytPlayer){ytInternal=true;try{ytPlayer.pauseVideo();}catch(e){}}}
 (function(){const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);})();
 window.onYouTubeIframeAPIReady=function(){
   ytPlayer=new YT.Player('yt-player',{width:256,height:200,
     playerVars:{playsinline:1,rel:0,modestbranding:1},
     events:{
-      onReady:()=>{ytReady=true;if(ytPending){const id=ytPending;ytPending=null;playYT(id);}},
+      onReady:()=>{ytReady=true;if(ytPending){const id=ytPending;ytPending=null;playYT(id);}else{const f=SECTION_TRACKS[currentSection]||SECTION_TRACKS[0];if(f.yt){try{ytPlayer.cueVideoById(f.yt);}catch(e){}}}},
       onStateChange:e=>{
         if(e.data===YT.PlayerState.ENDED){ytPlayer.seekTo(0);ytPlayer.playVideo();}
-        if(e.data===YT.PlayerState.PLAYING){ytInternal=false;}
+        if(e.data===YT.PlayerState.PLAYING){ytInternal=false;if(ytBridge&&audioCtx){const g=ytBridge.gain;g.cancelScheduledValues(audioCtx.currentTime);g.setValueAtTime(g.value,audioCtx.currentTime);g.linearRampToValueAtTime(0,audioCtx.currentTime+1.2);}}
         if(e.data===YT.PlayerState.PAUSED&&!ytInternal&&playing&&ytActive&&!document.hidden){ /* paused from the video's own controls */
           playing=false;
           document.getElementById('play-icon').style.display='block';
