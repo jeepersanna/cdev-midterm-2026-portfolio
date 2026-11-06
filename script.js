@@ -122,7 +122,7 @@ const SECTION_TRACKS = [
     url:null, yt:'s5BmVv_RdIY', synthIdx:0 },
   // s2 — alone
   { title:'keep on rockin\' in the free world', artist:'neil young', year:'1989',
-    url:null, yt:'TnAgc1kgvLc', synthIdx:0 },
+    url:null, yt:'DvxxdZpMFHg', synthIdx:0 },
   // s3 — a world with no windows
   { title:'jesus freak', artist:'dc talk', year:'1995',
     url:null, yt:'kbB0QrBIs9k', synthIdx:1 },
@@ -150,8 +150,7 @@ function initAudio(){
   sourceNode.connect(analyser);
 }
 function stopAll(){
-  if(ytReady&&ytPlayer){try{ytPlayer.pauseVideo();}catch(e){}}
-  ytActive=false;document.getElementById('tape-screen')?.classList.remove('on');
+  ytActive=false;
   if(audioEl&&!audioEl.paused){audioEl.pause();}
   nodes.forEach(n=>{try{n.stop&&n.stop();}catch(e){}try{n.disconnect&&n.disconnect();}catch(e){}});
   nodes=[];
@@ -223,8 +222,13 @@ function playTrack(idx){
   document.getElementById('tape-title-text').textContent=`${track.title} — ${track.artist}`;
   if(track.yt){
     ytActive=true;playYT(track.yt);
+    // silent synth, only to give the waveform something real to follow
+    if(!vizAnalyser){vizAnalyser=audioCtx.createAnalyser();vizAnalyser.fftSize=512;const mute=audioCtx.createGain();mute.gain.value=0;vizAnalyser.connect(mute);mute.connect(audioCtx.destination);}
+    const vm=audioCtx.createGain();vm.gain.value=0.5;vm.connect(vizAnalyser);nodes.push(vm);
+    playSynth(track.synthIdx, vm);
     return;
   }
+  ytStop();
   if(track.url){
     // Use prefetched buffer if available
     const cached = _prefetchCache[track.url];
@@ -271,7 +275,7 @@ function toggleMusic(){
     document.getElementById('tape-led').classList.add('on');
     toggleReelSpin(true);startViz();
   }else{
-    playing=false;stopAll();
+    playing=false;stopAll();ytStop();
     document.getElementById('play-icon').style.display='block';
     document.getElementById('pause-icon').style.display='none';
     document.getElementById('tape-play-btn').classList.remove('playing');
@@ -330,8 +334,9 @@ function startViz(){
     const w=canvas.width,h=canvas.height;
     ctx.clearRect(0,0,w,h);ctx.fillStyle='#050008';ctx.fillRect(0,0,w,h);
     let s;
-    if(analyser&&dataArr&&!ytActive){
-      analyser.getByteTimeDomainData(dataArr);
+    const src=(ytActive&&vizAnalyser)?vizAnalyser:analyser;
+    if(src&&dataArr){
+      src.getByteTimeDomainData(dataArr);
       let sum=0;const slice=Math.floor(bufLen/4);
       for(let i=slice;i<bufLen-slice;i++)sum+=((dataArr[i]/128)-1);
       s=(sum/(bufLen/2))*2.5;
@@ -361,7 +366,8 @@ document.querySelectorAll('.sb-block--lyrics').forEach(block => {
 
 
 // ── Portfolio copy: real songs through YouTube's official embedded player ──
-let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null;
+let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null, ytInternal=false, vizAnalyser=null;
+function ytStop(){document.getElementById('tape-screen')?.classList.remove('on');if(ytReady&&ytPlayer){ytInternal=true;try{ytPlayer.pauseVideo();}catch(e){}}}
 (function(){const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);})();
 window.onYouTubeIframeAPIReady=function(){
   ytPlayer=new YT.Player('yt-player',{width:256,height:200,
@@ -370,7 +376,8 @@ window.onYouTubeIframeAPIReady=function(){
       onReady:()=>{ytReady=true;if(ytPending){const id=ytPending;ytPending=null;playYT(id);}},
       onStateChange:e=>{
         if(e.data===YT.PlayerState.ENDED){ytPlayer.seekTo(0);ytPlayer.playVideo();}
-        if(e.data===YT.PlayerState.PAUSED&&playing&&ytActive&&!document.hidden){ /* paused from the video's own controls */
+        if(e.data===YT.PlayerState.PLAYING){ytInternal=false;}
+        if(e.data===YT.PlayerState.PAUSED&&!ytInternal&&playing&&ytActive&&!document.hidden){ /* paused from the video's own controls */
           playing=false;
           document.getElementById('play-icon').style.display='block';
           document.getElementById('pause-icon').style.display='none';
@@ -385,5 +392,6 @@ function playYT(id){
   document.getElementById('tape-screen').classList.add('on');
   if(!ytReady){ytPending=id;return;}
   const cur=ytPlayer.getVideoData&&ytPlayer.getVideoData().video_id;
+  ytInternal=true;
   if(cur===id){ytPlayer.playVideo();} else {ytPlayer.loadVideoById(id);}
 }
