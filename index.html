@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raised on the Answer Key</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&display=swap"></noscript>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav id="chapter-marker">
+  <div class="cdot active" style="background:#e8008a" onclick="scrollTo(0,0)"></div>
+  <div class="cdot" style="background:#a070e0" onclick="document.getElementById('s1').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#e8008a" onclick="document.getElementById('s2').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#6080f0" onclick="document.getElementById('s3').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#d040c0" onclick="document.getElementById('s4').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#ff80d8" onclick="document.getElementById('s5').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#ff4080" onclick="document.getElementById('s6').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#8040c0" onclick="document.getElementById('s7').scrollIntoView({behavior:'smooth'})"></div>
+  <div class="cdot" style="background:#c090ff" onclick="document.getElementById('s-refs').scrollIntoView({behavior:'smooth'})"></div>
+</nav>
+
+<!-- MIXTAPE -->
+<div class="tape-screen" id="tape-screen" aria-label="Now playing video"><div id="yt-player"></div></div>
+<div id="mixtape">
+  <div class="tape-shell">
+    <div class="tape-label">
+      <div class="tape-controls">
+        <!-- REW -->
+        <button class="t-btn" id="btn-rew" onclick="prevTrack()" title="Previous">
+          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="9,1 1,7 9,13" fill="currentColor"/>
+            <polygon points="17,1 9,7 17,13" fill="currentColor" opacity="0.55"/>
+            <rect x="0" y="1" width="1.5" height="12" rx="0.75" fill="currentColor" opacity="0.7"/>
+          </svg>
+        </button>
+        <!-- PLAY/PAUSE -->
+        <button class="t-btn" id="tape-play-btn" onclick="toggleMusic()" title="Play / Pause">
+          <svg id="play-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="2,1 13,7 2,13" fill="currentColor"/>
+          </svg>
+          <svg id="pause-icon" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+            <rect x="1.5" y="1" width="4" height="12" rx="1" fill="currentColor"/>
+            <rect x="8.5" y="1" width="4" height="12" rx="1" fill="currentColor"/>
+          </svg>
+        </button>
+        <!-- FF -->
+        <button class="t-btn" id="btn-ff" onclick="skipTrack()" title="Next track">
+          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="1,1 9,7 1,13" fill="currentColor" opacity="0.55"/>
+            <polygon points="9,1 17,7 9,13" fill="currentColor"/>
+            <rect x="16.5" y="1" width="1.5" height="12" rx="0.75" fill="currentColor" opacity="0.7"/>
+          </svg>
+        </button>
+      </div>
+      <span class="led" id="tape-led"></span>
+      <span class="tape-title-text" id="tape-title-text">PRESS PLAY</span>
+      <span class="tape-side">C-60</span>
+    </div>
+    <div class="tape-body">
+      <div class="reel" id="reel-left"><svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="24" fill="#090015" stroke="rgba(232,0,138,0.18)" stroke-width="1"/><circle cx="25" cy="25" r="18" fill="none" stroke="rgba(232,0,138,0.08)" stroke-width="1.5"/><g class="reel-spin"><circle cx="25" cy="25" r="5.5" fill="#180028" stroke="#e8008a" stroke-width="1" opacity="0.8"/><line x1="25" y1="8" x2="25" y2="19" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="25" y1="31" x2="25" y2="42" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="9" y1="16" x2="18.5" y2="21.8" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="31.5" y1="28.2" x2="41" y2="34" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="9" y1="34" x2="18.5" y2="28.2" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="31.5" y1="21.8" x2="41" y2="16" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/></g><circle cx="25" cy="25" r="2.5" fill="#e8008a" opacity="0.8"/></svg></div>
+      <div class="tape-window"><canvas id="tape-canvas"></canvas></div>
+      <div class="reel" id="reel-right"><svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="24" fill="#090015" stroke="rgba(64,96,232,0.18)" stroke-width="1"/><circle cx="25" cy="25" r="18" fill="none" stroke="rgba(64,96,232,0.08)" stroke-width="1.5"/><g class="reel-spin"><circle cx="25" cy="25" r="5.5" fill="#180028" stroke="#4060e8" stroke-width="1" opacity="0.8"/><line x1="25" y1="8" x2="25" y2="19" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="25" y1="31" x2="25" y2="42" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="9" y1="16" x2="18.5" y2="21.8" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="31.5" y1="28.2" x2="41" y2="34" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="9" y1="34" x2="18.5" y2="28.2" stroke="#4060e8" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/><line x1="31.5" y1="21.8" x2="41" y2="16" stroke="#e8008a" stroke-width="1.4" stroke-linecap="round" opacity="0.7"/></g><circle cx="25" cy="25" r="2.5" fill="#4060e8" opacity="0.8"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FLOATING NAV ══ -->
+<nav id="float-nav" aria-label="Page navigation">
+  <ul id="float-nav-menu" role="list">
+    <li><a href="#hero">Intro</a></li>
+    <li class="nav-divider"></li>
+    <li><a href="#s1"><span class="nav-num">01</span> Structure Before Self</a></li>
+    <li><a href="#s2"><span class="nav-num">02</span> Loneliness of Learning Alone</a></li>
+    <li><a href="#s3"><span class="nav-num">03</span> A Biblical Worldview</a></li>
+    <li><a href="#s4"><span class="nav-num">04</span> Unschooling &amp; Total Freedom</a></li>
+    <li><a href="#s5"><span class="nav-num">05</span> What Was Missing</a></li>
+    <li><a href="#s6"><span class="nav-num">06</span> And What Remains</a></li>
+    <li><a href="#s7"><span class="nav-num">07</span> Fin</a></li>
+    <li class="nav-divider"></li>
+    <li><a href="#s-refs">References &amp; Discography</a></li>
+  </ul>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero" data-mood="0">
+  <div id="hero-cassette"><img id="hero-cassette-img" alt="Neon cassette tape" fetchpriority="high"></div>
+  <div class="hero-inner">
+    <div class="hero-eyebrow r" id="hero-eyebrow"></div>
+    <h1 class="hero-title r d1" style="margin-bottom: 2rem;">
+      RAISED ON THE ANSWER KEY
+      <span class="soft">memory, music, and the making of a mind</span>
+    </h1>
+    <p class="hero-sub r d2" id="hero-intro"></p>
+    <div class="tag-row r d3">
+      <span class="tag tag-accent">HOMESCHOOL</span>
+      <span class="tag">CONSTRUCTIVISM</span>
+      <span class="tag">DISCOURSE</span>
+      <span class="tag">IDENTITY</span>
+    </div>
+    <div class="hero-hint r d4">↓ SCROLL</div>
+  </div>
+</section>
+
+
+<!-- ══ S1 — THE UPBRINGING ══ -->
+<section id="s1" data-mood="1">
+  <div class="sec-bg"><img id="bg-s1" alt=""></div>
+  <div class="ch-num">01</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s1-label"></div>
+      <p class="pull-q r d1" id="s1-pullq"></p>
+
+      <div class="stat-row r d2">
+        <div class="stat">
+          <span class="stat-num">K–12</span>
+          <span class="stat-label">entirely homeschooled</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">0</span>
+          <span class="stat-label">classroom peers</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">∞</span>
+          <span class="stat-label">unanswered questions</span>
+        </div>
+      </div>
+
+      <p class="bt r d3" id="s1-p1"></p>
+      <p class="bt r d4" id="s1-p2"></p>
+      <div class="sec-div r d4"></div>
+      <p class="bt r d4" id="s1-p3"></p>
+      <p class="bt r d5" id="s1-p4"></p>
+      <p class="bt r d6" id="s1-p5"></p>
+      <div class="iq r d6">
+        <p id="s1-quote"></p>
+        <cite id="s1-cite"></cite>
+      </div>
+      <p class="bt r d6" id="s1-p6"></p>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s1a" alt="Anna as a baby with her dad"><div class="img-cap" style="color:#a070e0;"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s1b" alt="Anna as a baby with her parents — first family portrait"><div class="img-cap" style="color:#a070e0;" id="s1-cap2"></div></div>
+      <div class="img-card slide-r d4"><img id="img-s1d" alt="Anna's family during her early childhood years in Ohio"><div class="img-cap" style="color:#a070e0;" id="s1-cap4"></div></div>
+      <div class="img-card slide-r d5"><img id="img-s1c" alt="Toddler me"><div class="img-cap" style="color:#a070e0;" id="s1-cap3"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: I CAN'T GET OVER IT ══ -->
+<section class="song-break" id="br1" style="background:#0a0018;">
+  <div class="sec-bg"><img loading="lazy" src="images/album-s1.jpg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#a070e0;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#a070e0;">I Can't Get Over It</div>
+    <div class="sb-meta r d2">
+      <span>The 77s</span><span class="sb-sep">·</span>
+      <span>The 77s</span><span class="sb-sep">·</span>
+      <span>1987</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s1"><img loading="lazy" src="images/album-s1.jpg" alt="The 77s — self-titled album cover, 1987"></div>
+      <div class="album-info" style="color:#a070e0;">
+        <div class="album-artist">The 77s</div>
+        <div class="album-title">The 77s</div>
+        <div class="album-year">1987</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#a070e0;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#a070e0;">WHY THIS SONG</div>
+      <p class="sb-body" id="br1-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#a070e0;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S2 — ALONE ══ -->
+<section id="s2" data-mood="2">
+  <div class="sec-bg"><img id="bg-s2" alt=""></div>
+  <div class="ch-num">02</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s2-label"></div>
+      <p class="pull-q r d1" id="s2-pullq"></p>
+
+      <p class="bt r d3" id="s2-p1"></p>
+      <p class="bt r d4" id="s2-p2"></p>
+      <div class="iq r d5">
+        <p id="s2-quote"></p>
+        <cite id="s2-cite"></cite>
+      </div>
+      <p class="bt r d6" id="s2-p3"></p>
+      <p class="bt r d6" id="s2-p4"></p>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s2a" alt="Young Anna with oversized headphones"><div class="img-cap" style="color:#e8008a;" id="s2-cap1"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s2b" alt="The beloved record player"></div>
+      <div class="img-card slide-r d4"><img id="img-s2c" alt="Baby Anna with a sailor cap"><div class="img-cap" style="color:#e8008a;" id="s2-cap2"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: KEEP ON ROCKIN' IN THE FREE WORLD ══ -->
+<section class="song-break" id="br2" style="background:#0d0622;">
+  <div class="sec-bg"><img loading="lazy" src="images/neilyoung-freedom.jpg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#e8008a;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#e8008a;">Keep on Rockin' in the Free World</div>
+    <div class="sb-meta r d2">
+      <span>Neil Young</span><span class="sb-sep">·</span>
+      <span>Freedom</span><span class="sb-sep">·</span>
+      <span>1989</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s2"><img loading="lazy" src="images/neilyoung-freedom.jpg" alt="Neil Young — Freedom album cover, 1989"></div>
+      <div class="album-info" id="info-s2" style="color:#e8008a;">
+        <div class="album-artist">Neil Young</div>
+        <div class="album-title">Freedom</div>
+        <div class="album-year">1989</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#e8008a;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#e8008a;">WHY THIS SONG</div>
+      <p class="sb-body" id="br2-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#e8008a;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S3 — THE LOOP ══ -->
+<section id="s3" data-mood="3">
+  <div class="sec-bg"><img id="bg-s3" alt=""></div>
+  <div class="ch-num">03</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s3-label"></div>
+      <p class="pull-q r d1" id="s3-pullq"></p>
+
+      <div class="theory-grid r d2">
+        <div class="theory-pill"><span>black + white thinking</span></div>
+        <div class="theory-pill"><span>sacred vs. secular</span></div>
+        <div class="theory-pill"><span>Gee's Discourse</span></div>
+      </div>
+
+      <p class="bt r d3" id="s3-p1"></p>
+      <p class="bt r d4" id="s3-p2"></p>
+      <div class="sec-div r d4"></div>
+      <p class="bt r d5" id="s3-p3"></p>
+      <p class="bt r d5" id="s3-p4"></p>
+      <div class="iq r d6">
+        <p id="s3-quote"></p>
+        <cite id="s3-cite"></cite>
+      </div>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s3a" alt="Grumpy Anna at a festival"><div class="img-cap" style="color:#6080f0;" id="s3-cap1"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s3b" alt="Anna with her dad"></div>
+      <div class="img-card slide-r d4"><img id="img-s3c" alt="Minnie Mouse"></div>
+      <div class="img-card slide-r d5"><img id="img-s3d" alt="Anna and brother and aunt"><div class="img-cap" style="color:#6080f0;"></div></div>
+      <div class="img-card slide-r d6"><img id="img-s3e" alt="Anna and Kate"><div class="img-cap" style="color:#6080f0;" id="s3-cap2"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: CREEP ══ -->
+<section class="song-break" id="br3" style="background:#1a0028;">
+  <div class="sec-bg"><img loading="lazy" src="images/jesusfreak.jpg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#6080f0;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#6080f0;">Jesus Freak</div>
+    <div class="sb-meta r d2">
+      <span>DC Talk</span><span class="sb-sep">·</span>
+      <span>Jesus Freak</span><span class="sb-sep">·</span>
+      <span>1995</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s3"><img loading="lazy" src="images/jesusfreak.jpg" alt="DC Talk — Jesus Freak album cover, 1995"></div>
+      <div class="album-info" style="color:#6080f0;">
+        <div class="album-artist">DC Talk</div>
+        <div class="album-title">Jesus Freak</div>
+        <div class="album-year">1995</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#6080f0;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#6080f0;">WHY THIS SONG</div>
+      <p class="sb-body" id="br3-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#6080f0;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S4 — LONGING ══ -->
+<section id="s4" data-mood="4">
+  <div class="sec-bg"><img id="bg-s4" alt=""></div>
+  <div class="ch-num">04</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s4-label"></div>
+      <p class="pull-q r d1" id="s4-pullq"></p>
+
+      <div class="stat-row r d2">
+        <div class="stat">
+          <span class="stat-num">NO CURRICULA</span>
+          <span class="stat-label">self-directed</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">NO SUPPORT</span>
+          <span class="stat-label">no feedback</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">NO ROADMAP</span>
+          <span class="stat-label">no future imagined</span>
+        </div>
+      </div>
+
+      <p class="bt r d3" id="s4-p1"></p>
+      <p class="bt r d4" id="s4-p2"></p>
+      <div class="iq r d5">
+        <p id="s4-quote"></p>
+        <cite id="s4-cite"></cite>
+      </div>
+      <p class="bt r d6" id="s4-p3"></p>
+      <p class="bt r d6" id="s4-p4"></p>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s4a" alt="Taken with a Blackberry"><div class="img-cap" style="color:#d040c0;"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s4b" alt="Anna in a reflective moment during her teenage years"><div class="img-cap" style="color:#d040c0;"></div></div>
+      <div class="img-card slide-r d4"><img id="img-s4c" alt="Anna during her freshman year at DAAP, Cincinnati"><div class="img-cap" style="color:#d040c0;"></div></div>
+      <div class="img-card slide-r d5"><img id="img-s4d" alt="Anna and Beth"><div class="img-cap" style="color:#d040c0;"></div></div>
+      <div class="img-card slide-r d6"><img id="img-s4e" alt="Anna as a teenager during her unschooling years"><div class="img-cap" style="color:#d040c0;" id="s4-cap"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: ZOMBIE ══ -->
+<section class="song-break" id="br4" style="background:#060820;">
+  <div class="sec-bg"><img loading="lazy" src="images/thecranberries-noneedtoargue.jpg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#d040c0;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#d040c0;">Zombie</div>
+    <div class="sb-meta r d2">
+      <span>The Cranberries</span><span class="sb-sep">·</span>
+      <span>No Need to Argue</span><span class="sb-sep">·</span>
+      <span>1994</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s4"><img loading="lazy" src="images/thecranberries-noneedtoargue.jpg" alt="The Cranberries — No Need to Argue album cover, 1994"></div>
+      <div class="album-info" style="color:#d040c0;">
+        <div class="album-artist">The Cranberries</div>
+        <div class="album-title">No Need to Argue</div>
+        <div class="album-year">1994</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#d040c0;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#d040c0;">WHY THIS SONG</div>
+      <p class="sb-body" id="br4-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#d040c0;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S5 — THEORIES ══ -->
+<section id="s5" data-mood="5">
+  <div class="sec-bg"><img id="bg-s5" alt=""></div>
+  <div class="ch-num">05</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s5-label"></div>
+      <p class="pull-q r d1" id="s5-pullq"></p>
+
+      <div class="theory-grid r d2">
+        <div class="theory-pill"><span>Gee 1989</span></div>
+        <div class="theory-pill"><span>Dewey 1916</span></div>
+        <div class="theory-pill"><span>Piaget 1952</span></div>
+        <div class="theory-pill"><span>Vygotsky 1978</span></div>
+      </div>
+
+      <p class="bt r d3" id="s5-p1"></p>
+      <p class="bt r d4" id="s5-p2"></p>
+      <div class="iq r d5">
+        <p id="s5-quote"></p>
+        <cite id="s5-cite"></cite>
+      </div>
+      <p class="bt r d6" id="s5-p3"></p>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s5a" alt="Anna and Rose"><div class="img-cap" style="color:#ff80d8;" id="s5-cap1"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s5b" alt="Katherine and Becky"><div class="img-cap" style="color:#ff80d8;"></div></div>
+      <div class="img-card slide-r d4"><img id="img-s5c" alt="Anna in a Halloween costume"><div class="img-cap" style="color:#ff80d8;"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: SEVENTY TIMES 7 ══ -->
+<section class="song-break" id="br5" style="background:#280038;">
+  <div class="sec-bg"><img loading="lazy" src="images/yourfavorite.webp" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#ff80d8;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#ff80d8;">Seventy Times 7</div>
+    <div class="sb-meta r d2">
+      <span>Brand New</span><span class="sb-sep">·</span>
+      <span>Your Favorite Weapon</span><span class="sb-sep">·</span>
+      <span>2001</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s5"><img loading="lazy" src="images/yourfavorite.webp" alt="Brand New — Your Favorite Weapon album cover, 2001"></div>
+      <div class="album-info" style="color:#ff80d8;">
+        <div class="album-artist">Brand New</div>
+        <div class="album-title">Your Favorite Weapon</div>
+        <div class="album-year">2001</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#ff80d8;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#ff80d8;">WHY THIS SONG</div>
+      <p class="sb-body" id="br5-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#ff80d8;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S6 — ASSET-BASED ══ -->
+<section id="s6" data-mood="6">
+  <div class="sec-bg"><img id="bg-s6" alt=""></div>
+  <div class="ch-num">06</div>
+  <div class="ch-inner">
+    <div class="ch-text">
+      <div class="ch-label r" id="s6-label"></div>
+      <p class="pull-q r d1" id="s6-pullq"></p>
+
+      <div class="stat-row r d2">
+        <div class="stat">
+          <span class="stat-num">EMPATHY</span>
+          <span class="stat-label">the engine</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">EQUITY</span>
+          <span class="stat-label">the goal</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">ADVOCACY</span>
+          <span class="stat-label">the work</span>
+        </div>
+      </div>
+
+      <p class="bt r d3" id="s6-p1"></p>
+      <div class="iq r d4">
+        <p id="s6-quote"></p>
+        <cite id="s6-cite"></cite>
+      </div>
+      <p class="bt r d5" id="s6-p2"></p>
+      <p class="bt r d6" id="s6-p3"></p>
+      <p class="bt r d6" id="s6-p4"></p>
+    </div>
+    <div class="ch-img-col">
+      <div class="img-card slide-r d2"><img id="img-s6" alt="Graduation at University of Cincinnati"><div class="img-cap" style="color:#ff4080;" id="s6-cap"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s6b" alt="Anna and Kevin at an outdoor festival"><div class="img-cap" style="color:#ff4080;" id="s6-cap2"></div></div>
+      <div class="img-card slide-r d4"><img id="img-s6c" alt="Anna and Rae at Twin Peaks"><div class="img-cap" style="color:#ff4080;" id="s6-cap3"></div></div>
+      <div class="img-card slide-r d5"><img id="img-s6d" alt="Anna and Rae at Glen Park"><div class="img-cap" style="color:#ff4080;" id="s6-cap4"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: ANTHEMS FOR A SEVENTEEN YEAR OLD GIRL ══ -->
+<section class="song-break" id="br6" style="background:#1a0030;">
+  <div class="sec-bg"><img loading="lazy" src="images/brokensocialscene-youforgotitinpeople.jpg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#ff4080;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#ff4080;">Anthems for a Seventeen Year Old Girl</div>
+    <div class="sb-meta r d2">
+      <span>Broken Social Scene</span><span class="sb-sep">·</span>
+      <span>You Forgot It in People</span><span class="sb-sep">·</span>
+      <span>2003</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s6"><img loading="lazy" src="images/brokensocialscene-youforgotitinpeople.jpg" alt="Broken Social Scene — You Forgot It in People album cover, 2003"></div>
+      <div class="album-info" style="color:#ff4080;">
+        <div class="album-artist">Broken Social Scene</div>
+        <div class="album-title">You Forgot It in People</div>
+        <div class="album-year">2003</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#ff4080;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#ff4080;">WHY THIS SONG</div>
+      <p class="sb-body" id="br6-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#ff4080;"></div>
+  </div>
+</section>
+
+
+
+<!-- ══ S7 — CLOSING ══ -->
+<section id="s7" data-mood="7">
+  <div class="sec-bg s7-bg"><img id="bg-s7" alt="Anna and her kids at a school rally holding a Pencils Down sign"></div>
+  <div class="s7-inner">
+    <div class="chapter-outro">
+      <div class="ch-label r" style="color:#8040c0;">FIN</div>
+      <p class="big-close r d1" id="s7-big-close"></p>
+      <p class="big-close-sub r d2" id="s7-big-close-sub"></p>
+      <div class="outro-photo-cap r d3" id="s7-outro-cap" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(26,10,48,0.4);margin-bottom:28px;max-width:480px;line-height:1.7;"></div>
+      <div class="byline r d4" id="s7-byline"></div>
+    </div>
+    <div class="ch-img-col s7-imgs">
+      <div class="img-card slide-r d2"><img id="img-s7a" alt="Anna with friends and fellow educators"><div class="img-cap" style="color:#c090ff;" id="s7-cap1"></div></div>
+      <div class="img-card slide-r d3"><img id="img-s7b" alt="Anna at the Women's March"><div class="img-cap" style="color:#c090ff;" id="s7-cap2"></div></div>
+      <div class="img-card slide-r d4"><img id="img-s7c" alt="Anna's kids holding a Pencils Down sign at the Oakland teachers strike rally"><div class="img-cap" style="color:#c090ff;" id="s7-cap3"></div></div>
+    </div>
+  </div>
+</section>
+<!-- ══ BREAK: CAME OUT SWINGING ══ -->
+<section class="song-break" id="br7" style="background:#0f001a;">
+  <div class="sec-bg"><img loading="lazy" src="images/thewonderyears - suburbia.jpeg" alt=""></div>
+  <div class="song-break-inner">
+    <div class="sb-label r" style="color:#8040c0;">NOW PLAYING</div>
+    <div class="sb-title r d1" style="color:#8040c0;">Came Out Swinging</div>
+    <div class="sb-meta r d2">
+      <span>The Wonder Years</span><span class="sb-sep">·</span>
+      <span>Suburbia I've Given You All and Now I'm Nothing</span><span class="sb-sep">·</span>
+      <span>2011</span>
+    </div>
+    <div class="album-card" style="margin:20px 0 4px;">
+      <div class="album-placeholder" id="album-s7"><img loading="lazy" src="images/thewonderyears - suburbia.jpeg" alt="The Wonder Years — Suburbia I've Given You All and Now I'm Nothing album cover, 2011"></div>
+      <div class="album-info" style="color:#8040c0;">
+        <div class="album-artist">The Wonder Years</div>
+        <div class="album-title">Suburbia I've Given You All and Now I'm Nothing</div>
+        <div class="album-year">2011</div>
+      </div>
+    </div>
+    <div class="sb-rule r d2" style="background:#8040c0;"></div>
+    <div class="sb-block r d3">
+      <div class="sb-block-label" style="color:#8040c0;">WHY THIS SONG</div>
+      <p class="sb-body" id="br7-why"></p>
+    </div>
+    <div class="sb-rule r d4" style="background:#8040c0;"></div>
+  </div>
+</section>
+
+<!-- ══ REFERENCES & DISCOGRAPHY ══ -->
+<section id="s-refs">
+  <div class="refs-inner">
+    <div class="refs-watermark">REF</div>
+
+    <div class="refs-columns" style="position:relative;">
+      <div class="refs-divider"></div>
+
+      <!-- LEFT: REFERENCES -->
+      <div class="refs-col">
+        <div class="refs-label r">Works Cited</div>
+        <h2 class="refs-heading r">References</h2>
+        <ol class="refs-list">
+          <li class="r d1">Dewey, J. (1916). <em>Democracy and education: An introduction to the philosophy of education.</em> Macmillan.</li>
+          <li class="r d2">Gee, J. P. (1989). Literacy, discourse, and linguistics: Introduction. <em>Journal of Education, 171</em>(1), 5–17. https://doi.org/10.1177/002205748917100101</li>
+          <li class="r d3">Hammond, Z. (2015). <em>Culturally responsive teaching and the brain: Promoting authentic engagement and rigor among culturally and linguistically diverse students.</em> Corwin.</li>
+          <li class="r d4">McLeod, S. (2025). <em>John Dewey's theory of learning and education.</em> Simply Psychology.</li>
+          <li class="r d5">Piaget, J. (1952). <em>The origins of intelligence in children.</em> International Universities Press.</li>
+          <li class="r d6">Turk, D. (2023, August 30). An asset-based approach to education: What it is and why it matters. <em>NYU Steinhardt Teacher Residency Program.</em> https://teachereducation.steinhardt.nyu.edu/an-asset-based-approach-to-education-what-it-is-and-why-it-matters/</li>
+          <li class="r d7">Vygotsky, L. S. (1978). <em>Mind in society: The development of higher psychological processes.</em> Harvard University Press.</li>
+        </ol>
+      </div>
+
+      <!-- RIGHT: DISCOGRAPHY -->
+      <div class="disc-col">
+        <div class="disc-label r">Mixtape</div>
+        <h2 class="disc-heading r">Discography</h2>
+        <ol class="disc-list">
+          <li>
+            <span class="disc-artist">The 77s</span>
+            <span class="disc-track">"I Can't Get Over It"</span>
+            <span class="disc-album">The 77s · 1987</span>
+          </li>
+          <li>
+            <span class="disc-artist">Neil Young</span>
+            <span class="disc-track">"Keep on Rockin' in the Free World"</span>
+            <span class="disc-album">Freedom · 1989</span>
+          </li>
+          <li>
+            <span class="disc-artist">DC Talk</span>
+            <span class="disc-track">"Jesus Freak"</span>
+            <span class="disc-album">Jesus Freak · 1995</span>
+          </li>
+          <li>
+            <span class="disc-artist">The Cranberries</span>
+            <span class="disc-track">"Zombie"</span>
+            <span class="disc-album">No Need to Argue · 1994</span>
+          </li>
+		  <li>
+            <span class="disc-artist">Brand New</span>
+            <span class="disc-track">"Seventy Times 7"</span>
+            <span class="disc-album">Your Favorite Weapon · 2001</span>
+          </li>          
+          <li>
+            <span class="disc-artist">Broken Social Scene</span>
+            <span class="disc-track">"Anthems for a Seventeen Year Old Girl"</span>
+            <span class="disc-album">You Forgot It in People · 2003</span>
+          </li>
+          <li>
+            <span class="disc-artist">The Wonder Years</span>
+            <span class="disc-track">"Came Out Swinging"</span>
+            <span class="disc-album">Suburbia I've Given You All and Now I'm Nothing · 2011</span>
+          </li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<script src="content.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
