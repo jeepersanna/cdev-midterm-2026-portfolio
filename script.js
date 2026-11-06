@@ -221,12 +221,12 @@ function playTrack(idx){
   const track=SECTION_TRACKS[Math.min(idx, SECTION_TRACKS.length-1)];
   document.getElementById('tape-title-text').textContent=`${track.title} — ${track.artist}`;
   if(track.yt){
+    let already=false;try{already=ytReady&&ytPlayer.getPlayerState()===YT.PlayerState.PLAYING&&ytPlayer.getVideoData().video_id===track.yt;}catch(e){}
     ytActive=true;playYT(track.yt);
     // silent synth, only to give the waveform something real to follow
     if(!vizAnalyser){vizAnalyser=audioCtx.createAnalyser();vizAnalyser.fftSize=512;const mute=audioCtx.createGain();mute.gain.value=0;vizAnalyser.connect(mute);mute.connect(audioCtx.destination);}
     const vm=audioCtx.createGain();vm.gain.value=0.5;vm.connect(vizAnalyser);nodes.push(vm);
-    ytBridge=audioCtx.createGain();ytBridge.gain.value=0;vm.connect(ytBridge);ytBridge.connect(analyser);nodes.push(ytBridge);
-    fade(ytBridge,0,0.35,0.6);
+    if(!already) startHiss();
     playSynth(track.synthIdx, vm);
     return;
   }
@@ -368,8 +368,8 @@ document.querySelectorAll('.sb-block--lyrics').forEach(block => {
 
 
 // ── Portfolio copy: real songs through YouTube's official embedded player ──
-let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null, ytInternal=false, vizAnalyser=null, ytBridge=null;
-function ytStop(){document.getElementById('tape-screen')?.classList.remove('on');if(ytReady&&ytPlayer){ytInternal=true;try{ytPlayer.pauseVideo();}catch(e){}}}
+let ytPlayer=null, ytReady=false, ytActive=false, ytPending=null, ytInternal=false, vizAnalyser=null;
+function ytStop(){if(typeof stopHiss==='function'&&audioCtx)stopHiss(true);document.getElementById('tape-screen')?.classList.remove('on');if(ytReady&&ytPlayer){ytInternal=true;try{ytPlayer.pauseVideo();}catch(e){}}}
 (function(){const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);})();
 window.onYouTubeIframeAPIReady=function(){
   ytPlayer=new YT.Player('yt-player',{width:256,height:200,
@@ -378,7 +378,7 @@ window.onYouTubeIframeAPIReady=function(){
       onReady:()=>{ytReady=true;if(ytPending){const id=ytPending;ytPending=null;playYT(id);}else{const f=SECTION_TRACKS[currentSection]||SECTION_TRACKS[0];if(f.yt){try{ytPlayer.cueVideoById(f.yt);}catch(e){}}}},
       onStateChange:e=>{
         if(e.data===YT.PlayerState.ENDED){ytPlayer.seekTo(0);ytPlayer.playVideo();}
-        if(e.data===YT.PlayerState.PLAYING){ytInternal=false;if(ytBridge&&audioCtx){const g=ytBridge.gain;g.cancelScheduledValues(audioCtx.currentTime);g.setValueAtTime(g.value,audioCtx.currentTime);g.linearRampToValueAtTime(0,audioCtx.currentTime+1.2);}}
+        if(e.data===YT.PlayerState.PLAYING){ytInternal=false;stopHiss();}
         if(e.data===YT.PlayerState.PAUSED&&!ytInternal&&playing&&ytActive&&!document.hidden){ /* paused from the video's own controls */
           playing=false;
           document.getElementById('play-icon').style.display='block';
@@ -396,4 +396,35 @@ function playYT(id){
   const cur=ytPlayer.getVideoData&&ytPlayer.getVideoData().video_id;
   ytInternal=true;
   if(cur===id){ytPlayer.playVideo();} else {ytPlayer.loadVideoById(id);}
+}
+
+// ── Tape hiss: the same soft static for every track, only while a song loads ──
+let hissBuf=null, hissSrc=null, hissGain=null, hissWatch=null;
+function startHiss(){
+  stopHiss(true);
+  if(!hissBuf){
+    const len=audioCtx.sampleRate*2; hissBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+    const d=hissBuf.getChannelData(0); let b0=0,b1=0,b2=0;
+    for(let i=0;i<len;i++){const w=Math.random()*2-1; b0=0.997*b0+w*0.029; b1=0.985*b1+w*0.032; b2=0.95*b2+w*0.048; d[i]=(b0+b1+b2+w*0.05)*0.6;}
+  }
+  hissSrc=audioCtx.createBufferSource(); hissSrc.buffer=hissBuf; hissSrc.loop=true;
+  const hp=audioCtx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=900;
+  const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=7000;
+  hissGain=audioCtx.createGain(); hissGain.gain.value=0;
+  hissSrc.connect(hp); hp.connect(lp); lp.connect(hissGain); hissGain.connect(analyser);
+  hissSrc.start(); fade(hissGain,0,0.22,0.4);
+  // watch for the song to start; hard stop after 10 s no matter what
+  const started=audioCtx.currentTime;
+  hissWatch=setInterval(()=>{
+    let st=-1; try{st=ytPlayer.getPlayerState();}catch(e){}
+    if(st===YT.PlayerState.PLAYING || audioCtx.currentTime-started>10 || !playing) stopHiss();
+  },200);
+}
+function stopHiss(now){
+  if(hissWatch){clearInterval(hissWatch);hissWatch=null;}
+  if(!hissSrc) return;
+  const src=hissSrc, g=hissGain; hissSrc=null; hissGain=null;
+  const t0=audioCtx.currentTime, dur=now?0.05:0.8;
+  g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(g.gain.value,t0); g.gain.linearRampToValueAtTime(0,t0+dur);
+  setTimeout(()=>{try{src.stop();src.disconnect();g.disconnect();}catch(e){}},dur*1000+60);
 }
