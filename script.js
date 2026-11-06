@@ -141,13 +141,14 @@ const SECTION_TRACKS = [
 ];
 
 function initAudio(){
-  if(audioCtx)return;
+  if(audioCtx){loadSwap();return;}
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
   analyser=audioCtx.createAnalyser();analyser.fftSize=512;
   analyser.connect(audioCtx.destination);
   audioEl=new Audio();audioEl.crossOrigin='anonymous';audioEl.loop=true;audioEl.volume=0.75;
   sourceNode=audioCtx.createMediaElementSource(audioEl);
   sourceNode.connect(analyser);
+  loadSwap();
 }
 function stopAll(){
   ytActive=false;
@@ -412,46 +413,128 @@ function cassetteClunk(dest){
   clk.buffer=cb; const bp=audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2400; bp.Q.value=1.2;
   const cg=audioCtx.createGain(); cg.gain.value=0.35; clk.connect(bp); bp.connect(cg); cg.connect(dest); clk.start(t0+0.01);
 }
+function tapeTick(dest,when,amp){
+  // one small irregular click: the reels catching, tape slapping the guide
+  const n=Math.floor(audioCtx.sampleRate*0.008), buf=audioCtx.createBuffer(1,n,audioCtx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,4);
+  const s=audioCtx.createBufferSource(); s.buffer=buf;
+  const bp=audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1300+Math.random()*1600; bp.Q.value=3;
+  const g=audioCtx.createGain(); g.gain.value=amp;
+  s.connect(bp); bp.connect(g); g.connect(dest); s.start(when);
+}
+function _burst(dest,when,dur,freq,q,amp,shape){
+  const n=Math.max(1,Math.floor(audioCtx.sampleRate*dur)), buf=audioCtx.createBuffer(1,n,audioCtx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++){const x=i/n; const env=shape==='slide'?Math.sin(Math.PI*x)*0.8:Math.pow(1-x,4); d[i]=(Math.random()*2-1)*env;}
+  const s=audioCtx.createBufferSource(); s.buffer=buf;
+  const f=audioCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=freq; f.Q.value=q;
+  const g=audioCtx.createGain(); g.gain.value=amp; s.connect(f); f.connect(g); g.connect(dest); s.start(when);
+}
+function _thump(dest,when,from,to,amp,dur){
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type='sine';
+  o.frequency.setValueAtTime(from,when); o.frequency.exponentialRampToValueAtTime(to,when+dur);
+  g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(amp,when+0.004); g.gain.exponentialRampToValueAtTime(0.0001,when+dur);
+  o.connect(g); g.connect(dest); o.start(when); o.stop(when+dur+0.02);
+}
+function cassetteSwap(dest){
+  // stop, eject, pull the old tape, slide the new one in, shut the door, press play
+  const t=audioCtx.currentTime;
+  _burst(dest,t,0.02,2600,2,0.5);            // stop key
+  _thump(dest,t+0.005,160,60,0.35,0.12);
+  _burst(dest,t+0.16,0.03,1900,1.5,0.7);     // eject latch
+  _thump(dest,t+0.165,220,90,0.45,0.15);
+  _burst(dest,t+0.2,0.09,3200,0.9,0.25,'slide'); // door springs open
+  _burst(dest,t+0.42,0.16,1400,0.8,0.35,'slide');// old tape out
+  _burst(dest,t+0.72,0.18,1200,0.8,0.35,'slide');// new tape in
+  _burst(dest,t+0.93,0.025,2200,1.8,0.8);    // tape seats
+  _burst(dest,t+1.08,0.03,1700,1.6,0.9);     // door snaps shut
+  _thump(dest,t+1.082,200,55,0.6,0.18);
+  _burst(dest,t+1.32,0.02,2600,2,0.6);       // play key
+  _thump(dest,t+1.322,150,48,0.5,0.16);
+}
 function startHiss(){
   stopHiss(true);
+  if(rewindBuf){
+    // recorded rewind (Pixabay sound effect), looped while the song loads
+    hissGain=audioCtx.createGain(); hissGain.gain.value=0; hissGain.connect(analyser);
+    hissSrc=audioCtx.createBufferSource(); hissSrc.buffer=rewindBuf; hissSrc.loop=true;
+    hissSrc.connect(hissGain); hissSrc.start(); hissExtra=[];
+    fade(hissGain,0,1.0,0.2);
+    const st0=audioCtx.currentTime;
+    hissWatch=setInterval(()=>{
+      let st=-1; try{st=ytPlayer.getPlayerState();}catch(e){}
+      if(st===YT.PlayerState.PLAYING || audioCtx.currentTime-st0>5){ stopHiss(false,true); }
+      else if(!playing){ stopHiss(); }
+    },150);
+    return;
+  }
+  loadSwap(); // also fetches the rewind; synthesized rewind plays until it arrives
   if(!hissBuf){
     const len=audioCtx.sampleRate*2; hissBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
     const d=hissBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
   }
   const t0=audioCtx.currentTime;
   hissGain=audioCtx.createGain(); hissGain.gain.value=0; hissGain.connect(analyser);
-  // rewind: the tape whirs up to speed and keeps spinning while the next song loads
-  // 1) motor whine, pitch climbing as the reels speed up
-  const whine=audioCtx.createOscillator(), wg=audioCtx.createGain(); whine.type='sawtooth';
-  whine.frequency.setValueAtTime(180,t0); whine.frequency.exponentialRampToValueAtTime(900,t0+1.4);
-  const wlp=audioCtx.createBiquadFilter(); wlp.type='lowpass'; wlp.frequency.value=2200; wlp.Q.value=4;
-  wg.gain.value=0.05; whine.connect(wlp); wlp.connect(wg); wg.connect(hissGain);
-  // 2) tape rushing past the heads: noise swept upward through a resonant band
+  // motor: low, steady, only a small rise in pitch
+  const whine=audioCtx.createOscillator(), wg=audioCtx.createGain(); whine.type='triangle';
+  whine.frequency.setValueAtTime(170,t0); whine.frequency.linearRampToValueAtTime(205,t0+0.8);
+  const wlp=audioCtx.createBiquadFilter(); wlp.type='lowpass'; wlp.frequency.value=650;
+  wg.gain.value=0.025; whine.connect(wlp); wlp.connect(wg); wg.connect(hissGain);
+  // tape rush: soft and narrow
   const rush=audioCtx.createBufferSource(); rush.buffer=hissBuf; rush.loop=true;
-  const rbp=audioCtx.createBiquadFilter(); rbp.type='bandpass'; rbp.Q.value=2.2;
-  rbp.frequency.setValueAtTime(500,t0); rbp.frequency.exponentialRampToValueAtTime(3800,t0+1.4);
-  const rg=audioCtx.createGain(); rg.gain.value=0.5; rush.connect(rbp); rbp.connect(rg); rg.connect(hissGain);
-  // 3) flutter: the uneven spin of a cheap deck
-  const flt=audioCtx.createOscillator(), fg=audioCtx.createGain(); flt.frequency.value=11; fg.gain.value=60; flt.connect(fg); fg.connect(whine.frequency);
-  const flt2=audioCtx.createOscillator(), fg2=audioCtx.createGain(); flt2.frequency.value=6; fg2.gain.value=0.15; flt2.connect(fg2); fg2.connect(rg.gain);
+  const rbp=audioCtx.createBiquadFilter(); rbp.type='bandpass'; rbp.Q.value=1.4; rbp.frequency.value=1100;
+  const rg=audioCtx.createGain(); rg.gain.value=0.28; rush.connect(rbp); rbp.connect(rg); rg.connect(hissGain);
+  // flutter: wobble on level and pitch, nudged at random so it never settles
+  const flt=audioCtx.createOscillator(), fg=audioCtx.createGain(); flt.frequency.value=9; fg.gain.value=14; flt.connect(fg); fg.connect(whine.frequency);
+  const flt2=audioCtx.createOscillator(), fg2=audioCtx.createGain(); flt2.frequency.value=5; fg2.gain.value=0.12; flt2.connect(fg2); fg2.connect(rg.gain);
   hissSrc=rush;
   [rush,whine,flt,flt2].forEach(n=>n.start(t0));
   hissExtra=[whine,flt,flt2,wg,wlp,rbp,rg,fg,fg2];
-  fade(hissGain,0,0.3,0.25);
+  fade(hissGain,0,0.32,0.2);
+  // uneven ticking and drift
+  let alive=true; const hg=hissGain; hissExtra.push({stop:()=>{alive=false;}});
+  (function tick(){
+    if(!alive||hissGain!==hg) return;
+    const now=audioCtx.currentTime;
+    tapeTick(hg, now, 0.35+Math.random()*0.5);
+    if(Math.random()<0.25) tapeTick(hg, now+0.012+Math.random()*0.02, 0.2+Math.random()*0.3);
+    flt.frequency.setTargetAtTime(6+Math.random()*7, now, 0.1);
+    rbp.frequency.setTargetAtTime(850+Math.random()*500, now, 0.15);
+    setTimeout(tick, 45+Math.random()*130);
+  })();
   const started=t0;
   hissWatch=setInterval(()=>{
     let st=-1; try{st=ytPlayer.getPlayerState();}catch(e){}
-    if(st===YT.PlayerState.PLAYING){ stopHiss(false,true); }
-    else if(audioCtx.currentTime-started>10 || !playing){ stopHiss(); }
+    if(st===YT.PlayerState.PLAYING || audioCtx.currentTime-started>5){ stopHiss(false,true); }
+    else if(!playing){ stopHiss(); }
   },150);
 }
 function stopHiss(now,landed){
   if(hissWatch){clearInterval(hissWatch);hissWatch=null;}
   if(!hissSrc) return;
-  if(landed) cassetteClunk(analyser);
+  if(landed) playSwapSample();
   const src=hissSrc, g=hissGain; hissSrc=null; hissGain=null;
   const t0=audioCtx.currentTime, dur=now?0.05:(landed?0.12:0.8);
   g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(g.gain.value,t0); g.gain.linearRampToValueAtTime(0,t0+dur);
   const extra=hissExtra; hissExtra=[];
   setTimeout(()=>{try{src.stop();src.disconnect();g.disconnect();}catch(e){} extra.forEach(n=>{try{n.stop&&n.stop();}catch(e){} try{n.disconnect();}catch(e){}});},dur*1000+60);
+}
+
+
+// ── Recorded cassette swap (Pixabay sound effect, free to use) ──
+let swapBuf=null, swapLoading=null, rewindBuf=null;
+function loadSwap(){
+  if(swapLoading||!audioCtx) return swapLoading;
+  const get=(u)=>fetch(u).then(r=>r.arrayBuffer()).then(b=>audioCtx.decodeAudioData(b));
+  swapLoading=Promise.all([
+    get('sounds/cassette-swap.mp3').then(b=>{swapBuf=b;}).catch(()=>{}),
+    get('sounds/rewind.mp3').then(b=>{rewindBuf=b;}).catch(()=>{})
+  ]);
+  return swapLoading;
+}
+function playSwapSample(){
+  if(!audioCtx) return;
+  if(!swapBuf){ cassetteSwap(analyser); loadSwap(); return; } // fallback until the file has loaded
+  const s=audioCtx.createBufferSource(); s.buffer=swapBuf;
+  const g=audioCtx.createGain(); g.gain.value=0.9;
+  s.connect(g); g.connect(analyser); s.start();
 }
