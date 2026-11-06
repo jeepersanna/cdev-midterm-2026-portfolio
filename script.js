@@ -269,7 +269,8 @@ function prevTrack(){
 function toggleMusic(){
   if(!playing){
     initAudio();if(audioCtx.state==='suspended')audioCtx.resume();playing=true;
-    playTrack(currentSection);
+    if(rewindBuf){playTrack(currentSection);}
+    else{const go=()=>{if(playing&&!hissSrc)playTrack(currentSection);};Promise.race([loadSwap()||Promise.resolve(),new Promise(r=>setTimeout(r,1500))]).then(go);}
     // Eagerly prefetch the next two tracks on first play
     setTimeout(()=>{ _prefetchTrack(1); _prefetchTrack(2); }, 2000);
     document.getElementById('play-icon').style.display='none';
@@ -522,9 +523,11 @@ function stopHiss(now,landed){
 
 // ── Recorded cassette swap (Pixabay sound effect, free to use) ──
 let swapBuf=null, swapLoading=null, rewindBuf=null;
+const sfxBytes={};
+['sounds/cassette-swap.mp3','sounds/rewind.mp3'].forEach(u=>{sfxBytes[u]=fetch(u).then(r=>r.arrayBuffer());});
 function loadSwap(){
   if(swapLoading||!audioCtx) return swapLoading;
-  const get=(u)=>fetch(u).then(r=>r.arrayBuffer()).then(b=>audioCtx.decodeAudioData(b));
+  const get=(u)=>(sfxBytes[u]||fetch(u).then(r=>r.arrayBuffer())).then(b=>audioCtx.decodeAudioData(b.slice(0)));
   swapLoading=Promise.all([
     get('sounds/cassette-swap.mp3').then(b=>{swapBuf=b;}).catch(()=>{}),
     get('sounds/rewind.mp3').then(b=>{rewindBuf=b;}).catch(()=>{})
